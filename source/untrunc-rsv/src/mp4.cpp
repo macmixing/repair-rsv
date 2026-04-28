@@ -2678,7 +2678,7 @@ void Mp4::repairRsv(const string& filename) {
 		// Check both prefix (bytes 0-3) and MXF marker (bytes 8-11) to avoid false positives
 		int rtmd_count = 0;
 		uchar rtmd_header[12];
-		while (pos + rtmd_count * rtmd_packet_size < file_size && rtmd_count < 100) {
+		while (pos + rtmd_count * rtmd_packet_size + (off_t)sizeof(rtmd_header) <= file_size && rtmd_count < 100) {
 			file_read.seek(pos + rtmd_count * rtmd_packet_size);
 			file_read.readChar((char*)rtmd_header, 12);
 			// Check prefix (001c0100) AND marker at offset 8 (f0010010)
@@ -2697,6 +2697,10 @@ void Mp4::repairRsv(const string& filename) {
 		
 		off_t rtmd_end = pos + rtmd_count * rtmd_packet_size;
 		off_t video_start = rtmd_end;  // Video starts immediately after rtmd block
+		if (video_start >= file_size) {
+			logg(W, "incomplete trailing RSV metadata block at ", pos, ", ending recovery before EOF\n");
+			break;
+		}
 		
 		logg(V, "GOP ", gop_count, ": rtmd at ", pos, " (", rtmd_count, " packets), video starts at ", video_start, "\n");
 		
@@ -2758,6 +2762,10 @@ void Mp4::repairRsv(const string& filename) {
 		
 		// Audio region (all tracks combined) is before next rtmd
 		off_t audio_boundary = next_rtmd_start - total_audio_chunk_size;
+		if (audio_boundary <= video_start || audio_boundary > file_size) {
+			logg(W, "incomplete trailing RSV GOP at ", pos, ", ending recovery before EOF\n");
+			break;
+		}
 		
 		// Filter out any frame offsets that are past the audio boundary
 		while (!frame_offsets.empty() && frame_offsets.back() >= audio_boundary) {

@@ -1,0 +1,25 @@
+{
+  "name": "repair-rsv-app",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "web:dev": "vite --host 127.0.0.1",
+    "web:build": "tsc && vite build",
+    "dev": "tauri dev",
+    "build": "npm run web:build",
+    "check:tauri": "../scripts/with-appledouble-cleaner.sh cargo check --manifest-path src-tauri/Cargo.toml",
+    "prebundle": "../scripts/clean-appledouble.sh",
+    "bundle": "../scripts/tauri-bundle.sh",
+    "notarize": "../scripts/notarize-dmg.sh"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.2.0",
+    "@tauri-apps/plugin-dialog": "^2.2.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.2.0",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7"
+  }
+}

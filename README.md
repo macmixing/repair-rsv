@@ -4,6 +4,7 @@ Self-contained Sony `.RSV` repair package.
 
 This folder contains:
 
+- `app`: macOS Tauri app for drag/drop repair
 - `bin/untrunc-rsv`: working patched recovery binary
 - `scripts/recover-rsv.sh`: generic runner for donor clip + broken `.RSV`
 - `scripts/build-from-source.sh`: rebuilds the binary from the bundled source
@@ -27,6 +28,16 @@ This makes the recovery less dependent on donor timing assumptions.
 Use a donor clip from the same camera and recording mode when possible.
 
 ## Quick Use
+
+Use the desktop app for the simplest workflow:
+
+```zsh
+cd app
+npm install
+npm run dev
+```
+
+The app lets a user drag in a broken `.RSV`, drag in a donor clip, click `Repair`, watch progress, cancel if needed, and reveal the final output file.
 
 Run the bundled binary directly:
 
@@ -54,6 +65,18 @@ brew install ffmpeg pkgconf
 ```
 
 That rebuild script compiles `source/untrunc-rsv` and refreshes `bin/untrunc-rsv`.
+
+## Build The macOS App
+
+The app uses Tauri, so the Mac needs Node.js, npm, and Rust installed.
+
+```zsh
+cd app
+npm install
+npm run bundle
+```
+
+The DMG is produced under `app/src-tauri/target/release/bundle/dmg/`.
 
 ## Source Of Truth
 

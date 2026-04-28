@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Repair RSV</title>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Sony RSV Recovery</p>
+          <h1>Repair RSV</h1>
+        </div>
+        <div id="statePill" class="state-pill">Ready</div>
+      </section>
+
+      <section class="drop-grid" aria-label="Repair inputs">
+        <button id="brokenDrop" class="drop-zone" type="button">
+          <span class="label">Broken RSV</span>
+          <span id="brokenPath" class="path">Drop .RSV file or click to browse</span>
+        </button>
+        <button id="donorDrop" class="drop-zone" type="button">
+          <span class="label">Donor Clip</span>
+          <span id="donorPath" class="path">Drop donor video or click to browse</span>
+        </button>
+      </section>
+
+      <section class="status-panel" aria-live="polite">
+        <div class="progress-row">
+          <div class="progress-track">
+            <div id="progressFill" class="progress-fill"></div>
+          </div>
+          <span id="progressText" class="progress-text">0%</span>
+        </div>
+        <p id="statusText" class="status-text">Select a broken RSV file and a donor clip.</p>
+        <p id="outputPath" class="output-path"></p>
+      </section>
+
+      <section class="actions">
+        <button id="repairButton" class="primary" type="button" disabled>Repair</button>
+        <button id="cancelButton" class="secondary" type="button" disabled>Cancel</button>
+        <button id="revealButton" class="secondary" type="button" disabled>Reveal Output</button>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

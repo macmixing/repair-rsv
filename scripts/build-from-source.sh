@@ -7,8 +7,11 @@ OUT="$ROOT/bin/untrunc-rsv"
 
 export PATH="/opt/homebrew/opt/pkgconf/bin:$PATH"
 
-: "${CPPFLAGS:=-I/opt/homebrew/include}"
-: "${LDFLAGS:=-L/opt/homebrew/lib}"
+FFMPEG_CFLAGS="$(pkg-config --cflags libavformat libavcodec libavutil)"
+FFMPEG_LIBS="$(pkg-config --libs libavformat libavcodec libavutil)"
+
+: "${CPPFLAGS:=$FFMPEG_CFLAGS}"
+: "${LDFLAGS:=$FFMPEG_LIBS}"
 
 cd "$SRC"
 make clean

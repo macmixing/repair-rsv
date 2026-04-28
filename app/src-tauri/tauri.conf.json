@@ -1,0 +1,48 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Repair RSV",
+  "version": "0.1.0",
+  "identifier": "com.repairrsv.desktop",
+  "build": {
+    "beforeDevCommand": "npm run web:dev",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "npm run web:build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Repair RSV",
+        "width": 920,
+        "height": 640,
+        "minWidth": 760,
+        "minHeight": 560,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["dmg"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": {
+      "../../bin/untrunc-rsv": "bin/untrunc-rsv"
+    },
+    "macOS": {
+      "minimumSystemVersion": "12.0",
+      "signingIdentity": "Developer ID Application: Dominic Esposito (U7YT4DBC54)",
+      "hardenedRuntime": true,
+      "entitlements": "Entitlements.plist",
+      "providerShortName": "U7YT4DBC54"
+    }
+  }
+}

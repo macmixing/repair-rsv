@@ -11,3 +11,8 @@ source/untrunc-rsv/*.d
 source/untrunc-rsv/src/*.o
 source/untrunc-rsv/src/*.d
 source/untrunc-rsv/src/*.gch
+
+app/node_modules/
+app/dist/
+app/src-tauri/target/
+app/src-tauri/gen/
