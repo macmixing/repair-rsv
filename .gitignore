@@ -1,0 +1,13 @@
+.DS_Store
+._*
+*.log
+*_fixed-rsv.MP4
+
+source/untrunc-rsv/.build_*/
+source/untrunc-rsv/untrunc
+source/untrunc-rsv/untrunc-gui
+source/untrunc-rsv/*.o
+source/untrunc-rsv/*.d
+source/untrunc-rsv/src/*.o
+source/untrunc-rsv/src/*.d
+source/untrunc-rsv/src/*.gch
