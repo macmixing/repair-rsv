@@ -1,8 +1,14 @@
-# Repair RSV
+<p align="center">
+  <img src="app/src-tauri/icons/icon.png" alt="Repair RSV app icon" width="128" height="128">
+</p>
 
-Repair RSV exists so people do not have to pay hundreds of dollars to recover Sony `.RSV` files after interrupted recordings.
+<h1 align="center">Repair RSV</h1>
 
-It is a free and open source macOS repair app plus command-line recovery tool for Sony `.RSV` files. Use it, share it, improve it.
+<p align="center">
+  Free and open source Sony <code>.RSV</code> recovery for macOS.
+</p>
+
+Repair RSV is a macOS repair app and command-line recovery tool for Sony `.RSV` files left behind by interrupted recordings. It is built to make RSV recovery accessible without expensive proprietary repair services.
 
 ## What It Does
 
