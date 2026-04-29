@@ -22,6 +22,8 @@ let state: RepairState = "Ready";
 
 const brokenDrop = mustElement<HTMLButtonElement>("brokenDrop");
 const donorDrop = mustElement<HTMLButtonElement>("donorDrop");
+const brokenIcon = mustElement<HTMLSpanElement>("brokenIcon");
+const donorIcon = mustElement<HTMLSpanElement>("donorIcon");
 const brokenPath = mustElement<HTMLSpanElement>("brokenPath");
 const donorPath = mustElement<HTMLSpanElement>("donorPath");
 const statePill = mustElement<HTMLDivElement>("statePill");
@@ -182,6 +184,8 @@ function setProgress(percent: number) {
 }
 
 function render() {
+  brokenIcon.dataset.icon = brokenFile ? "document" : "plus";
+  donorIcon.dataset.icon = donorFile ? "document" : "plus";
   brokenPath.textContent = brokenFile ?? "Drop .RSV file or click to browse";
   donorPath.textContent = donorFile ?? "Drop donor video or click to browse";
   outputPath.textContent = outputFile ?? "";

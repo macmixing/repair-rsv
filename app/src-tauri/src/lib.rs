@@ -2,7 +2,7 @@ use serde::Serialize;
 use std::{
     io::{BufRead, BufReader},
     path::{Path, PathBuf},
-    process::{Child, Command, Stdio},
+    process::{Command, Stdio},
     sync::{
         atomic::{AtomicBool, Ordering},
         Mutex,
@@ -11,10 +11,14 @@ use std::{
 };
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt;
-use tauri::{path::BaseDirectory, AppHandle, Emitter, Manager};
+use tauri::{
+    menu::{AboutMetadataBuilder, Menu, MenuBuilder, SubmenuBuilder},
+    path::BaseDirectory,
+    AppHandle, Emitter, Manager, Wry,
+};
 
 struct RepairState {
-    child: Mutex<Option<Child>>,
+    child_pid: Mutex<Option<u32>>,
     cancelled: AtomicBool,
 }
 
@@ -34,7 +38,7 @@ fn start_repair(
     donor_path: String,
     broken_path: String,
 ) -> Result<(), String> {
-    if state.child.lock().map_err(|_| "Repair state is locked")?.is_some() {
+    if state.child_pid.lock().map_err(|_| "Repair state is locked")?.is_some() {
         return Err("A repair is already running.".to_string());
     }
 
@@ -65,9 +69,10 @@ fn start_repair(
 
     let stdout = child.stdout.take();
     let stderr = child.stderr.take();
+    let child_pid = child.id();
 
     state.cancelled.store(false, Ordering::SeqCst);
-    *state.child.lock().map_err(|_| "Repair state is locked")? = Some(child);
+    *state.child_pid.lock().map_err(|_| "Repair state is locked")? = Some(child_pid);
 
     emit_event(
         &app,
@@ -95,28 +100,11 @@ fn start_repair(
     let app_for_wait = app.clone();
     thread::spawn(move || {
         let state_for_wait = app_for_wait.state::<RepairState>();
-        let mut child = {
-            let mut guard = match state_for_wait.child.lock() {
-                Ok(guard) => guard,
-                Err(_) => {
-                    emit_event(
-                        &app_for_wait,
-                        "failed",
-                        None,
-                        Some("Repair state lock failed.".to_string()),
-                        None,
-                    );
-                    return;
-                }
-            };
-
-            match guard.take() {
-                Some(child) => child,
-                None => return,
-            }
-        };
-
         let exit_status = child.wait();
+
+        if let Ok(mut guard) = state_for_wait.child_pid.lock() {
+            *guard = None;
+        }
 
         if state_for_wait.cancelled.load(Ordering::SeqCst) {
             emit_event(
@@ -161,11 +149,25 @@ fn start_repair(
 fn cancel_repair(state: tauri::State<'_, RepairState>) -> Result<(), String> {
     state.cancelled.store(true, Ordering::SeqCst);
 
-    let mut guard = state.child.lock().map_err(|_| "Repair state is locked")?;
-    match guard.as_mut() {
-        Some(child) => child
-            .kill()
-            .map_err(|error| format!("Failed to cancel repair: {error}")),
+    let pid = {
+        let guard = state.child_pid.lock().map_err(|_| "Repair state is locked")?;
+        *guard
+    };
+
+    match pid {
+        Some(pid) => {
+            let status = Command::new("kill")
+                .arg("-TERM")
+                .arg(pid.to_string())
+                .status()
+                .map_err(|error| format!("Failed to cancel repair: {error}"))?;
+
+            if status.success() {
+                Ok(())
+            } else {
+                Err(format!("Failed to cancel repair: kill exited with {status}"))
+            }
+        }
         None => Err("No repair is running.".to_string()),
     }
 }
@@ -190,8 +192,12 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(RepairState {
-            child: Mutex::new(None),
+            child_pid: Mutex::new(None),
             cancelled: AtomicBool::new(false),
+        })
+        .setup(|app| {
+            app.set_menu(build_app_menu(app.handle())?)?;
+            Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             start_repair,
@@ -200,6 +206,48 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Repair RSV");
+}
+
+fn build_app_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
+    let about = AboutMetadataBuilder::new()
+        .name(Some("Repair RSV"))
+        .version(Some(env!("CARGO_PKG_VERSION")))
+        .copyright(Some("© 2026 Dom Esposito"))
+        .credits(Some("Builder: Dom Esposito\nLicense: GPL-3.0-or-later"))
+        .build();
+
+    let app_menu = SubmenuBuilder::new(app, "Repair RSV")
+        .about(Some(about))
+        .separator()
+        .services()
+        .separator()
+        .hide()
+        .hide_others()
+        .show_all()
+        .separator()
+        .quit()
+        .build()?;
+
+    let edit_menu = SubmenuBuilder::new(app, "Edit")
+        .undo()
+        .redo()
+        .separator()
+        .cut()
+        .copy()
+        .paste()
+        .select_all()
+        .build()?;
+
+    let window_menu = SubmenuBuilder::new(app, "Window")
+        .minimize()
+        .fullscreen()
+        .separator()
+        .close_window()
+        .build()?;
+
+    MenuBuilder::new(app)
+        .items(&[&app_menu, &edit_menu, &window_menu])
+        .build()
 }
 
 fn spawn_output_reader<R>(app: AppHandle, reader: R, parse_progress: bool)

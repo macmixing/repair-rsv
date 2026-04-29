@@ -5,7 +5,11 @@ ROOT="$(cd -- "$(dirname -- "$0")/.." && pwd)"
 APP_DIR="$ROOT/app"
 PROFILE="${NOTARY_PROFILE:-repair-rsv-notary}"
 
-DMG="$(find "$APP_DIR/dist-bundle" -maxdepth 1 -name '*.dmg' -print -quit 2>/dev/null || true)"
+DMG="$(find -L "$APP_DIR/src-tauri/target/release/bundle/dmg" -maxdepth 1 -name '*.dmg' -print -quit 2>/dev/null || true)"
+
+if [[ -z "$DMG" ]]; then
+  DMG="$(find "$APP_DIR/dist-bundle" -maxdepth 1 -name '*.dmg' -print -quit 2>/dev/null || true)"
+fi
 
 if [[ -z "$DMG" ]]; then
   DMG="$(find /tmp/repair-rsv-tauri-target/release/bundle/dmg -maxdepth 1 -name '*.dmg' -print -quit 2>/dev/null || true)"

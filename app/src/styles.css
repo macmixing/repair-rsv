@@ -1,6 +1,6 @@
 :root {
   color: #1a1d1f;
-  background: #eef0ec;
+  background: #e8e8e8;
   font-family: Avenir Next, Avenir, Helvetica Neue, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -17,7 +17,7 @@ body {
   margin: 0;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0)),
-    #eef0ec;
+    #e8e8e8;
 }
 
 button {
@@ -40,7 +40,7 @@ button {
 
 .eyebrow {
   margin: 0 0 8px;
-  color: #667066;
+  color: #5a60a9;
   font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
@@ -56,19 +56,19 @@ h1 {
 .state-pill {
   min-width: 108px;
   padding: 9px 14px;
-  border: 1px solid #ccd4cb;
+  border: 1px solid #c9cbd6;
   border-radius: 8px;
-  background: #f8faf6;
-  color: #424a42;
+  background: #f8f8f8;
+  color: #42444f;
   font-size: 13px;
   font-weight: 700;
   text-align: center;
 }
 
 .state-pill[data-state="running"] {
-  border-color: #b3c8a2;
-  background: #e5f4d5;
-  color: #334b22;
+  border-color: #5a60a9;
+  background: #ebeafd;
+  color: #3c4582;
 }
 
 .state-pill[data-state="failed"] {
@@ -78,9 +78,9 @@ h1 {
 }
 
 .state-pill[data-state="complete"] {
-  border-color: #98c1b0;
-  background: #e3f4ed;
-  color: #174f3a;
+  border-color: #5a60a9;
+  background: #ebeafd;
+  color: #3c4582;
 }
 
 .drop-grid {
@@ -94,8 +94,9 @@ h1 {
   min-height: 170px;
   flex-direction: column;
   justify-content: space-between;
+  align-items: stretch;
   padding: 20px;
-  border: 2px dashed #aeb8ad;
+  border: 2px dashed #aeb0bc;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.72);
   color: inherit;
@@ -109,7 +110,7 @@ h1 {
 
 .drop-zone:hover:not(:disabled),
 .drop-zone:focus-visible {
-  border-color: #58715a;
+  border-color: #5a60a9;
   background: #ffffff;
   transform: translateY(-1px);
   outline: none;
@@ -121,15 +122,44 @@ h1 {
 }
 
 .label {
-  color: #1d2a1f;
+  color: #23264a;
   font-size: 24px;
   font-weight: 800;
+}
+
+.drop-icon {
+  display: grid;
+  min-height: 62px;
+  place-items: center;
+  color: #5a60a9;
+}
+
+.icon {
+  width: 52px;
+  height: 52px;
+  fill: currentColor;
+}
+
+.icon-document {
+  display: none;
+}
+
+.drop-icon[data-icon="plus"] .icon-document {
+  display: none;
+}
+
+.drop-icon[data-icon="document"] .icon-document {
+  display: block;
+}
+
+.drop-icon[data-icon="document"] .icon-plus {
+  display: none;
 }
 
 .path {
   display: block;
   max-width: 100%;
-  color: #647064;
+  color: #626675;
   font-family: Menlo, Consolas, monospace;
   font-size: 12px;
   line-height: 1.45;
@@ -139,7 +169,7 @@ h1 {
 .status-panel {
   margin-top: 20px;
   padding: 20px;
-  border: 1px solid #d8ded5;
+  border: 1px solid #d6d7dd;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.66);
 }
@@ -154,21 +184,21 @@ h1 {
 .progress-track {
   height: 16px;
   overflow: hidden;
-  border: 1px solid #cad4c8;
+  border: 1px solid #c9cbd6;
   border-radius: 999px;
-  background: #e6ebe3;
+  background: #dedfe6;
 }
 
 .progress-fill {
   width: 0%;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #3f6b4a, #7b963f);
+  background: linear-gradient(90deg, #3c4582, #5a60a9);
   transition: width 160ms ease;
 }
 
 .progress-text {
-  color: #334033;
+  color: #34384d;
   font-size: 14px;
   font-weight: 800;
   text-align: right;
@@ -177,14 +207,14 @@ h1 {
 .status-text,
 .output-path {
   margin: 14px 0 0;
-  color: #4e594e;
+  color: #4f5361;
   font-size: 14px;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
 
 .output-path {
-  color: #1f4f36;
+  color: #3c4582;
   font-family: Menlo, Consolas, monospace;
   font-size: 12px;
 }
@@ -205,15 +235,15 @@ h1 {
 }
 
 .primary {
-  border: 1px solid #28372b;
-  background: #1f2f22;
+  border: 1px solid #3c4582;
+  background: #5a60a9;
   color: #ffffff;
 }
 
 .secondary {
-  border: 1px solid #c0c9be;
+  border: 1px solid #c4c6d0;
   background: #ffffff;
-  color: #263026;
+  color: #292d3d;
 }
 
 .primary:disabled,
