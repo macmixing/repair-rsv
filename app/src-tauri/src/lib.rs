@@ -11,10 +11,14 @@ use std::{
 };
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt;
+#[cfg(target_os = "macos")]
 use tauri::{
     menu::{AboutMetadataBuilder, Menu, MenuBuilder, SubmenuBuilder},
+    Wry,
+};
+use tauri::{
     path::BaseDirectory,
-    AppHandle, Emitter, Manager, Wry,
+    AppHandle, Emitter, Manager,
 };
 
 struct RepairState {
@@ -58,7 +62,13 @@ fn start_repair(
 
     let tool_display = tool.to_string_lossy().to_string();
 
-    let mut child = Command::new(&tool)
+    let mut command = Command::new(&tool);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW: no console flash
+    }
+    let mut child = command
         .arg("-rsv")
         .arg(&donor)
         .arg(&broken)
@@ -156,10 +166,16 @@ fn cancel_repair(state: tauri::State<'_, RepairState>) -> Result<(), String> {
 
     match pid {
         Some(pid) => {
+            #[cfg(windows)]
+            let status = Command::new("taskkill")
+                .args(["/PID", &pid.to_string(), "/T", "/F"])
+                .status();
+            #[cfg(not(windows))]
             let status = Command::new("kill")
                 .arg("-TERM")
                 .arg(pid.to_string())
-                .status()
+                .status();
+            let status = status
                 .map_err(|error| format!("Failed to cancel repair: {error}"))?;
 
             if status.success() {
@@ -179,10 +195,16 @@ fn reveal_output(output_path: String) -> Result<(), String> {
         return Err("Output file does not exist yet.".to_string());
     }
 
-    Command::new("open")
-        .arg("-R")
-        .arg(path)
-        .status()
+    #[cfg(windows)]
+    let result = {
+        // explorer needs "/select,<path>" as one argument
+        let mut arg = std::ffi::OsString::from("/select,");
+        arg.push(&path);
+        Command::new("explorer").arg(arg).status()
+    };
+    #[cfg(not(windows))]
+    let result = Command::new("open").arg("-R").arg(path).status();
+    result
         .map_err(|error| format!("Failed to reveal output: {error}"))?;
 
     Ok(())
@@ -195,8 +217,9 @@ pub fn run() {
             child_pid: Mutex::new(None),
             cancelled: AtomicBool::new(false),
         })
-        .setup(|app| {
-            app.set_menu(build_app_menu(app.handle())?)?;
+        .setup(|_app| {
+            #[cfg(target_os = "macos")]
+            _app.set_menu(build_app_menu(_app.handle())?)?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -208,6 +231,7 @@ pub fn run() {
         .expect("failed to run Repair RSV");
 }
 
+#[cfg(target_os = "macos")]
 fn build_app_menu(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
     let about = AboutMetadataBuilder::new()
         .name(Some("Repair RSV"))
@@ -325,8 +349,10 @@ fn emit_event(
     );
 }
 
+const TOOL: &str = if cfg!(windows) { "bin/untrunc-rsv.exe" } else { "bin/untrunc-rsv" };
+
 fn resolve_tool_path(app: &AppHandle) -> Result<PathBuf, String> {
-    if let Ok(resource_path) = app.path().resolve("bin/untrunc-rsv", BaseDirectory::Resource) {
+    if let Ok(resource_path) = app.path().resolve(TOOL, BaseDirectory::Resource) {
         if resource_path.is_file() {
             return Ok(resource_path);
         }
@@ -337,7 +363,7 @@ fn resolve_tool_path(app: &AppHandle) -> Result<PathBuf, String> {
         .parent()
         .and_then(Path::parent)
         .ok_or_else(|| "Cannot locate repository root.".to_string())?;
-    let dev_path = repo_root.join("bin/untrunc-rsv");
+    let dev_path = repo_root.join(TOOL);
 
     if dev_path.is_file() {
         Ok(dev_path)
