@@ -5,10 +5,17 @@
 <h1 align="center">Repair RSV</h1>
 
 <p align="center">
-  Free and open source Sony <code>.RSV</code> recovery for macOS.
+  Free and open source Sony <code>.RSV</code> recovery for macOS and Windows.
 </p>
 
 Repair RSV is a macOS repair app and command-line recovery tool for Sony `.RSV` files left behind by interrupted recordings. It is built to make RSV recovery accessible without expensive proprietary repair services.
+
+## Windows
+
+- Installer + portable zip built by `.github/workflows/windows.yml` (Actions artifacts, or Releases on `v*` tags).
+- Portable: unzip, keep `bin\untrunc-rsv.exe` next to `Repair RSV.exe`, run it.
+- CLI: `bin\untrunc-rsv.exe -rsv donor.mp4 broken.RSV`
+- Build engine yourself (Linux, mingw-w64): `scripts/build-windows-engine.sh`
 
 ## What It Does
 

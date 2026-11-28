@@ -2020,7 +2020,7 @@ bool Mp4::advanceOffset(off_t& offset, bool just_simulate) {
 bool Mp4::chkOffset(off_t& offset) {
 	off_t orig_off = offset;
 	bool r = advanceOffset(offset);
-	auto skipped = offset - orig_off;
+	int64_t skipped = offset - orig_off;
 	if (skipped && !unknown_length_) {
 		dbgg("chkOffset ", skipped);
 		chkExcludeOverlap(orig_off, skipped);

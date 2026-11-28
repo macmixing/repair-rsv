@@ -1,3 +1,10 @@
+#ifdef _WIN32
+// before "using namespace std" to avoid std::byte clash
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <shellapi.h>
+#include <codecvt>
+#endif
 #include "common.h"
 
 #include <iostream>
@@ -471,8 +478,6 @@ void parseMaxPartsize(string& s) {
 }
 
 #ifdef _WIN32
-#include <windows.h>
-#include <codecvt>
 
 string to_utf8(const wchar_t* utf16) {
 	wstring_convert<codecvt_utf8_utf16<wchar_t>, wchar_t> convert;
