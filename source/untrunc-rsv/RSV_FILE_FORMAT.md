@@ -19,7 +19,7 @@ Unlike standard MP4 files which use interleaved chunks, RSV files use a **GOP-ba
 Each GOP contains three sections in order:
 1. **rtmd block** - Timed metadata (variable packet count, typically 12 packets)
 2. **Video essence** - H.264/AVC or H.265/HEVC video frames (frame count detected from first GOP, assumed constant)
-3. **Audio essence** - PCM audio samples (size calculated once from first GOP's frame count, reused for all GOPs)
+3. **Audio essence** - PCM audio samples (size measured once from the GOPs at the start of the file, reused for all GOPs)
 
 ### GOP Structure Detail
 
@@ -157,9 +157,9 @@ The implementation auto-detects `frames_per_gop` by counting AUD patterns in the
 
 **Implementation behavior**:
 - `frames_per_gop` is detected from the first GOP only
-- `audio_chunk_size` is calculated **once** from this detected value and reused for all GOPs
+- `audio_chunk_size` is measured **once** from the GOPs in the first 128MB (see [Measurement](#measurement)) and reused for all GOPs; it is calculated from `frames_per_gop` only when no GOP can be measured
 - Frames are counted individually per GOP (would detect if sizes varied, but doesn't affect audio chunk calculation)
-- The implementation assumes GOP sizes are constant - if they varied, audio chunk size calculation would be incorrect
+- The implementation assumes GOP sizes are constant - if they varied, the single audio chunk size would be incorrect
 
 **Note**: Analysis of one 50GB RSV file (8,655 GOPs) showed all GOPs had exactly 12 frames, but the implementation makes no guarantee about consistency. If GOP sizes varied, the code would need to calculate `audio_chunk_size` per-GOP based on the actual frame count.
 
@@ -188,13 +188,25 @@ The implementation auto-detects `frames_per_gop` by counting AUD patterns in the
 - Total audio per GOP: 4 × per-track size
 
 ### Chunk Structure
-- **Chunk size**: Calculated from GOP duration and audio format
+- **Chunk size**: Measured from the RSV (see [Measurement](#measurement)), with a calculation from GOP duration and audio format as the fallback
 - **Samples per chunk**: `GOP_duration × sample_rate`
 - **Total audio size**: `samples × bytes_per_sample × num_tracks`
 
+### Measurement
+
+The audio chunk size is measured from the RSV itself (`src/rsv_audio_chunk.cpp`). For each complete GOP in the first 128MB, the NAL units of the last frame are walked by their 4-byte lengths from the last AUD toward the next rtmd block; the remaining bytes are that GOP's audio chunk.
+
+PCM audio can mimic video structure in a single GOP: quiet samples read as a plausible NAL length, and audio bytes can contain the AUD pattern. Two checks and a vote guard against this:
+
+1. A step is rejected when the NAL header has `forbidden_zero_bit` (top bit of the first header byte, the same in H.264 and HEVC) set.
+2. A step only counts as the video/audio boundary when the remaining bytes hold whole samples for every audio track (`bytes_per_sample × num_audio_tracks`).
+3. Every GOP votes for its measurement and the most common value wins (ties go to the earliest GOP). The real chunk size repeats in every GOP, while mimicked boundaries differ from GOP to GOP.
+
+The engine logs how many GOPs agreed, e.g. `measured audio chunk from RSV: 552960 bytes (4 tracks, 12 of 12 GOPs agree)`.
+
 ### Calculation
 
-Audio chunk size is calculated based on GOP duration:
+When no GOP can be measured, the audio chunk size is calculated from GOP duration:
 ```
 GOP_duration_sec = frames_per_gop / fps
 samples_per_chunk = GOP_duration_sec × audio_sample_rate
@@ -292,7 +304,7 @@ To recover an RSV file using untrunc:
    - RSV files are automatically detected if they start with the rtmd pattern at offset 0
    - The implementation auto-detects `rtmd_packet_size` by finding the distance between the first two rtmd patterns
    - The implementation auto-detects `frames_per_gop` by counting AUD patterns in the first GOP
-   - Audio chunk size is calculated **once** from the first GOP's frame count and reused for all GOPs
+   - Audio chunk size is measured **once** from the GOPs in the first 128MB and reused for all GOPs
 
 4. **Parse GOP structure**:
    - Find rtmd packets by checking both prefix (`001c0100`) AND Sony tag (`f0010010` at offset 8)
@@ -300,7 +312,7 @@ To recover an RSV file using untrunc:
    - Extract video frames by finding AUD patterns:
      - H.264: `00 00 00 02 09` (NAL type 9)
      - HEVC: `00 00 00 03 46` (NAL type 35)
-   - Audio chunk follows immediately after video frames (size calculated from GOP duration)
+   - Audio chunk follows immediately after video frames (size measured from the RSV)
 
 5. **Build MP4 container**:
    - Use codec parameters from reference file
@@ -311,7 +323,7 @@ To recover an RSV file using untrunc:
    - Count actual AUD patterns per GOP (frames are counted individually)
    - Count consecutive valid rtmd packets per GOP (rtmd count can vary)
    - Avoid false positive rtmd matches by verifying the Sony tag at offset 8
-   - **Note**: Audio chunk size is calculated from the first GOP and reused for all GOPs. The implementation assumes GOP sizes are constant throughout the file - if they varied, this would be incorrect.
+   - **Note**: Audio chunk size is measured from the start of the file and reused for all GOPs. The implementation assumes GOP sizes are constant throughout the file - if they varied, this would be incorrect.
 
 ## Known Cameras
 
@@ -386,5 +398,5 @@ The `-rsv` flag forces RSV recovery mode even if auto-detection fails.
 
 ---
 
-*This documentation was created during the development of RSV recovery support for untrunc. Last updated: January 2026*
+*This documentation was created during the development of RSV recovery support for untrunc. Last updated: November 2026*
 
