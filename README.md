@@ -106,7 +106,7 @@ Run the RSV recovery fixtures against a built engine (needs FFmpeg with `libx264
 ./tests/rsv/run.sh bin/untrunc-rsv
 ```
 
-The fixtures generate H.264 and HEVC clips with 4 × mono 24-bit and stereo 16-bit PCM, lay them out as Sony RSV GOPs, and recover them with the engine. Each recovery must match the source byte for byte per stream, with the same video packet sizes, keyframes, and stream durations.
+The fixtures generate H.264 and HEVC clips with 4 × mono 24-bit and stereo 16-bit PCM, lay them out as Sony RSV GOPs, and recover them with the engine. Each recovery must match the source byte for byte per stream, with the same video packet sizes, keyframes, and stored track durations. One fixture holds a real per-GOP audio chunk that differs from the size calculated from GOP timing, so only the measured size recovers it.
 
 Some fixtures plant audio that mimics a NAL unit at a GOP's video/audio boundary. Each one is built so that only one of the measurement's guards (whole-sample alignment, the NAL header check, or the GOP vote) can reject it, and the run checks how many GOPs agreed.
 
