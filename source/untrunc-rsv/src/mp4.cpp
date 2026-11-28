@@ -33,6 +33,7 @@ extern "C" {
 #include "mp4.h"
 #include "atom.h"
 #include "file.h"
+#include "rsv_audio_chunk.h"
 
 using namespace std;
 
@@ -2597,60 +2598,12 @@ void Mp4::repairRsv(const string& filename) {
 	int audio_chunk_size_per_track = audio_samples_per_chunk * audio_sample_size;
 	int total_audio_chunk_size = audio_chunk_size_per_track * max(1, num_audio_tracks);
 	
-	off_t measured_audio_chunk_size = -1;
-	if (file_size > 0) {
-		off_t detect_pos = 0;
-		int first_rtmd_count = 0;
-		while (detect_pos + 12 < detect_read && first_rtmd_count < 100) {
-			if (memcmp(detect_buf.data() + detect_pos, rtmd_pattern_prefix, 4) == 0 &&
-			    memcmp(detect_buf.data() + detect_pos + 8, rtmd_pattern_sony_tag, 4) == 0) {
-				first_rtmd_count++;
-				detect_pos += rtmd_packet_size;
-			} else {
-				break;
-			}
-		}
-		
-		if (first_rtmd_count > 0) {
-			off_t video_start = first_rtmd_count * rtmd_packet_size;
-			off_t next_rtmd = 0;
-			for (size_t i = video_start + 500 * 1024; i < detect_read - 12; i++) {
-				if (memcmp(detect_buf.data() + i, rtmd_pattern_prefix, 4) == 0 &&
-				    memcmp(detect_buf.data() + i + 8, rtmd_pattern_sony_tag, 4) == 0) {
-					next_rtmd = i;
-					break;
-				}
-			}
-			
-			if (next_rtmd > video_start) {
-				vector<off_t> detect_frame_offsets;
-				const uchar* aud_p = is_hevc ? aud_pattern_hevc : aud_pattern_h264;
-				for (size_t i = video_start; i + 5 < (size_t)next_rtmd; i++) {
-					if (memcmp(detect_buf.data() + i, aud_p, 5) == 0) {
-						detect_frame_offsets.push_back(i);
-					}
-				}
-				
-				if (!detect_frame_offsets.empty()) {
-					size_t cursor = detect_frame_offsets.back();
-					while (cursor + 4 <= (size_t)next_rtmd) {
-						uint nal_size =
-							((uint)detect_buf[cursor] << 24) |
-							((uint)detect_buf[cursor + 1] << 16) |
-							((uint)detect_buf[cursor + 2] << 8) |
-							(uint)detect_buf[cursor + 3];
-						if (nal_size == 0 || cursor + 4 + nal_size > (size_t)next_rtmd) {
-							break;
-						}
-						cursor += 4 + nal_size;
-					}
-					if (cursor > detect_frame_offsets.back() && cursor <= (size_t)next_rtmd) {
-						measured_audio_chunk_size = next_rtmd - cursor;
-					}
-				}
-			}
-		}
-	}
+	const RsvLayoutPatterns rsv_patterns = {rtmd_pattern_prefix, rtmd_pattern_sony_tag,
+	                                         is_hevc ? aud_pattern_hevc : aud_pattern_h264};
+	const off_t audio_frame_bytes = (off_t)max(1, audio_sample_size) * max(1, num_audio_tracks);
+	RsvAudioChunkMeasurement audio_measurement =
+		measureRsvAudioChunk(detect_buf.data(), detect_read, rtmd_packet_size, rsv_patterns, audio_frame_bytes);
+	off_t measured_audio_chunk_size = audio_measurement.chunk_size;
 	
 	if (measured_audio_chunk_size > 0) {
 		total_audio_chunk_size = measured_audio_chunk_size;
@@ -2658,7 +2611,8 @@ void Mp4::repairRsv(const string& filename) {
 			audio_chunk_size_per_track = total_audio_chunk_size / num_audio_tracks;
 			audio_samples_per_chunk = audio_chunk_size_per_track / max(1, audio_sample_size);
 		}
-		logg(I, "measured audio chunk from RSV: ", total_audio_chunk_size, " bytes (", num_audio_tracks, " tracks)\n");
+		logg(I, "measured audio chunk from RSV: ", total_audio_chunk_size, " bytes (", num_audio_tracks, " tracks, ",
+		     audio_measurement.agreeing_gops, " of ", audio_measurement.examined_gops, " GOPs agree)\n");
 	} else {
 		logg(I, "derived parameters: fps=", fps, ", GOP duration=", gop_duration_sec, "s, audio chunk=", total_audio_chunk_size, " bytes (", num_audio_tracks, " tracks)\n");
 	}
