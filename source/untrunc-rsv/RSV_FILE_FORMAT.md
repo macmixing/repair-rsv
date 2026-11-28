@@ -29,7 +29,7 @@ Each GOP contains three sections in order:
 ├─────────────────┬──────────────────────┬───────────────────-┤
 │   rtmd Block    │    Video Frames      │   Audio Chunk      │
 │   Variable size │    Variable size     │   Variable size    │
-│   (N × packet)  │    (variable count)  │   (calculated)     │
+│   (N × packet)  │    (variable count)  │   (measured)       │
 └─────────────────┴──────────────────────┴───────────────────-┘
 ```
 
@@ -362,9 +362,10 @@ The untrunc implementation includes several auto-detection features:
 1. **RSV File Detection**: Automatically detects RSV files by checking for rtmd pattern at offset 0
 2. **rtmd Packet Size**: Auto-detects packet size by measuring distance between first two rtmd patterns (handles 11K-30K byte packets)
 3. **Frames per GOP**: Auto-detects by counting AUD patterns in the first GOP (handles 12-48 frames)
-4. **Audio Track Discovery**: Finds all audio tracks (twos, sowt, ipcm) and calculates total audio size
-5. **Multi-Track Audio**: Supports cameras with multiple mono tracks (e.g., 4×24-bit ipcm)
-6. **Codec Support**: Supports both H.264/AVC (`avc1`) and H.265/HEVC (`hvc1`) codecs
+4. **Audio Track Discovery**: Finds all audio tracks (twos, sowt, ipcm) and their sample sizes
+5. **Audio Chunk Size**: Measures the per-GOP audio chunk from the RSV by GOP consensus (see [Measurement](#measurement)), calculating it from GOP duration only as a fallback
+6. **Multi-Track Audio**: Supports cameras with multiple mono tracks (e.g., 4×24-bit ipcm)
+7. **Codec Support**: Supports both H.264/AVC (`avc1`) and H.265/HEVC (`hvc1`) codecs
 
 ### Buffer Requirements
 
