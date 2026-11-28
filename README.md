@@ -22,6 +22,7 @@ Repair RSV uses a donor clip from the same camera/recording mode to rebuild a pl
 - `bin/untrunc-rsv`: patched command-line recovery binary
 - `lib`: bundled FFmpeg/Homebrew dylibs generated during release builds
 - `source/untrunc-rsv`: full patched C++ source for the recovery engine
+- `tests/rsv`: generated RSV recovery fixtures with byte-for-byte checks
 - `scripts/recover-rsv.sh`: command-line wrapper for donor + broken RSV
 - `scripts/build-from-source.sh`: rebuilds the patched recovery binary
 - `scripts/tauri-bundle.sh`: builds/signs the app package
@@ -98,6 +99,16 @@ Rebuild only the command-line recovery binary:
 ```zsh
 ./scripts/build-from-source.sh
 ```
+
+Run the RSV recovery fixtures against a built engine (needs FFmpeg with `libx264` and `libx265`, and `python3`):
+
+```zsh
+./tests/rsv/run.sh bin/untrunc-rsv
+```
+
+The fixtures generate H.264 and HEVC clips with 4 × mono 24-bit and stereo 16-bit PCM, lay them out as Sony RSV GOPs, recover them with the engine, and compare the recovered video and audio byte for byte. They include audio that mimics a NAL unit at the video/audio boundary.
+
+CI (`.github/workflows/ci.yml`) runs on every pull request and push to `main`: it builds the engine and runs these fixtures, and builds the web UI and checks the Tauri app on macOS.
 
 ## Release Build
 
