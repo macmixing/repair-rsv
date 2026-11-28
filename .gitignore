@@ -19,3 +19,4 @@ app/src-tauri/target/
 app/src-tauri/gen/
 lib/
 assets/
+__pycache__/

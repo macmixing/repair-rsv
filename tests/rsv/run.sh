@@ -52,6 +52,8 @@ echo "Building fixtures"
 python3 -I "$HERE/make_fixture.py" "$WORK/hevc50_4x24.mp4" "$WORK/hevc50_4x24" 48
 python3 -I "$HERE/make_fixture.py" "$WORK/h264_2997_4x24.mp4" "$WORK/h264_2997_4x24" 15
 python3 -I "$HERE/make_fixture.py" "$WORK/h264_2997_stereo16.mp4" "$WORK/h264_2997_stereo16" 15
+# Real chunk of 24000 samples per track where GOP timing gives 24024: only the measured size recovers it
+python3 -I "$HERE/make_fixture.py" "$WORK/h264_2997_4x24.mp4" "$WORK/h264_2997_4x24_measured_chunk" 15 24000
 # Audio at the start of a GOP that reads as a NAL unit. Each case is caught by one guard only:
 #   fake_valid_header:   GOP 0, 1796-byte step, not sample-aligned, valid header  -> whole-sample check
 #   fake_split_tracks:   GOP 0, 1797-byte step, whole samples for one track only  -> whole-sample check across all tracks
@@ -96,6 +98,7 @@ run_case "$WORK/hevc50_4x24_fake_sample_aligned" "$WORK/hevc50_4x24.mp4" 1
 run_case "$WORK/hevc50_4x24_fake_last_gop" "$WORK/hevc50_4x24.mp4" 1
 run_case "$WORK/h264_2997_4x24" "$WORK/h264_2997_4x24.mp4" 0
 run_case "$WORK/h264_2997_4x24_fake_valid_header" "$WORK/h264_2997_4x24.mp4" 0
+run_case "$WORK/h264_2997_4x24_measured_chunk" "$WORK/h264_2997_4x24.mp4" 0
 run_case "$WORK/h264_2997_stereo16" "$WORK/h264_2997_stereo16.mp4" 0
 
 if [[ $failures -gt 0 ]]; then

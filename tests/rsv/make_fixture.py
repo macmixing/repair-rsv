@@ -8,7 +8,9 @@ Outputs next to <out>: <out>.RSV, <out>.expected_video, <out>.expected_a<N> (the
 payloads a correct recovery must reproduce) and <out>.layout.json (GOP layout plus the
 expected video packets, keyframes and stream durations).
 
-usage: make_fixture.py <source.mp4> <out-prefix> <frames-per-gop>
+usage: make_fixture.py <source.mp4> <out-prefix> <frames-per-gop> [samples-per-gop]
+samples-per-gop overrides the audio samples each GOP holds per track (default: the GOP
+duration's worth), modelling cameras whose real chunk differs from the calculated size.
 """
 import json
 import subprocess
@@ -44,6 +46,7 @@ def rtmd_packet(counter):
 
 def main():
     source, out, frames_per_gop = sys.argv[1], sys.argv[2], int(sys.argv[3])
+    samples_override = int(sys.argv[4]) if len(sys.argv) > 4 else None
 
     video_info = probe(source, "v:0", "stream=codec_name,avg_frame_rate")["streams"][0]
     aud = AUD_PATTERNS[video_info["codec_name"]]
@@ -55,11 +58,13 @@ def main():
 
     audio_streams = probe(source, "a", "stream=index,sample_rate,channels,bits_per_sample")["streams"]
     audio = [stream_payload(source, f"0:a:{t}") for t in range(len(audio_streams))]
-    track_chunks = []
-    for stream in audio_streams:
-        samples = int(stream["sample_rate"]) * gop_seconds
-        assert samples.denominator == 1, "GOP duration must hold a whole number of audio samples"
-        track_chunks.append(int(samples) * int(stream["channels"]) * int(stream["bits_per_sample"]) // 8)
+    sample_rates = {int(stream["sample_rate"]) for stream in audio_streams}
+    assert len(sample_rates) == 1, "all audio tracks must share one sample rate"
+    sample_rate = sample_rates.pop()
+    samples = Fraction(samples_override) if samples_override else sample_rate * gop_seconds
+    assert samples.denominator == 1, "GOP duration must hold a whole number of audio samples"
+    track_chunks = [int(samples) * int(stream["channels"]) * int(stream["bits_per_sample"]) // 8
+                    for stream in audio_streams]
 
     gop_count = min(len(packet_sizes) // frames_per_gop,
                     min(len(a) // c for a, c in zip(audio, track_chunks)))
@@ -98,7 +103,8 @@ def main():
             "track_chunks": track_chunks,
             "audio_starts": audio_starts,
             "video_packets": [[int(p["size"]), "K" in p["flags"]] for p in packets[:gop_count * frames_per_gop]],
-            "duration_seconds": str(gop_count * gop_seconds),
+            "video_duration_seconds": str(gop_count * gop_seconds),
+            "audio_duration_seconds": str(gop_count * samples / sample_rate),
         }, f)
     print(f"{out}.RSV: {gop_count} GOPs, audio chunk {sum(track_chunks)} bytes, {len(track_chunks)} tracks")
 
