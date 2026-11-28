@@ -5,6 +5,7 @@ boundary walk can mistake audio for video. The expected track 1 payload is patch
 with the same bytes, because a correct recovery keeps them as audio.
 
 usage: plant_nal.py <src-prefix> <dst-prefix> <gop-index> <hex-bytes>
+(a negative gop-index counts from the last complete GOP)
 """
 import json
 import shutil
@@ -16,6 +17,7 @@ def main():
     with open(src + ".layout.json") as f:
         layout = json.load(f)
     assert len(data) <= layout["track_chunks"][0], "planted bytes must fit in track 1's chunk"
+    gop %= layout["gops"]
 
     for suffix in [".RSV", ".expected_video", ".layout.json"] + \
                   [f".expected_a{t}" for t in range(len(layout["track_chunks"]))]:

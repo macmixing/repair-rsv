@@ -52,13 +52,17 @@ echo "Building fixtures"
 python3 -I "$HERE/make_fixture.py" "$WORK/hevc50_4x24.mp4" "$WORK/hevc50_4x24" 48
 python3 -I "$HERE/make_fixture.py" "$WORK/h264_2997_4x24.mp4" "$WORK/h264_2997_4x24" 15
 python3 -I "$HERE/make_fixture.py" "$WORK/h264_2997_stereo16.mp4" "$WORK/h264_2997_stereo16" 15
-# Audio at the start of GOP 0 that reads as a NAL unit. Each case is caught by one guard only:
-#   fake_valid_header:   1796-byte step, not sample-aligned, valid header  -> whole-sample check
-#   fake_invalid_header: 1800-byte step, sample-aligned, forbidden bit set -> NAL header check
-#   fake_sample_aligned: 1800-byte step, sample-aligned, valid header      -> GOP vote
+# Audio at the start of a GOP that reads as a NAL unit. Each case is caught by one guard only:
+#   fake_valid_header:   GOP 0, 1796-byte step, not sample-aligned, valid header  -> whole-sample check
+#   fake_split_tracks:   GOP 0, 1797-byte step, whole samples for one track only  -> whole-sample check across all tracks
+#   fake_invalid_header: GOP 0, 1800-byte step, sample-aligned, forbidden bit set -> NAL header check
+#   fake_sample_aligned: GOP 0, 1800-byte step, sample-aligned, valid header      -> GOP vote
+#   fake_last_gop:       last GOP, same as fake_sample_aligned                   -> GOP vote, not last GOP wins
 python3 -I "$HERE/plant_nal.py" "$WORK/hevc50_4x24" "$WORK/hevc50_4x24_fake_valid_header" 0 0000070001
+python3 -I "$HERE/plant_nal.py" "$WORK/hevc50_4x24" "$WORK/hevc50_4x24_fake_split_tracks" 0 0000070101
 python3 -I "$HERE/plant_nal.py" "$WORK/hevc50_4x24" "$WORK/hevc50_4x24_fake_invalid_header" 0 00000704ff
 python3 -I "$HERE/plant_nal.py" "$WORK/hevc50_4x24" "$WORK/hevc50_4x24_fake_sample_aligned" 0 0000070401
+python3 -I "$HERE/plant_nal.py" "$WORK/hevc50_4x24" "$WORK/hevc50_4x24_fake_last_gop" -1 0000070401
 python3 -I "$HERE/plant_nal.py" "$WORK/h264_2997_4x24" "$WORK/h264_2997_4x24_fake_valid_header" 0 0000070001
 
 failures=0
@@ -86,8 +90,10 @@ run_case() {
 
 run_case "$WORK/hevc50_4x24" "$WORK/hevc50_4x24.mp4" 0
 run_case "$WORK/hevc50_4x24_fake_valid_header" "$WORK/hevc50_4x24.mp4" 0
+run_case "$WORK/hevc50_4x24_fake_split_tracks" "$WORK/hevc50_4x24.mp4" 0
 run_case "$WORK/hevc50_4x24_fake_invalid_header" "$WORK/hevc50_4x24.mp4" 0
 run_case "$WORK/hevc50_4x24_fake_sample_aligned" "$WORK/hevc50_4x24.mp4" 1
+run_case "$WORK/hevc50_4x24_fake_last_gop" "$WORK/hevc50_4x24.mp4" 1
 run_case "$WORK/h264_2997_4x24" "$WORK/h264_2997_4x24.mp4" 0
 run_case "$WORK/h264_2997_4x24_fake_valid_header" "$WORK/h264_2997_4x24.mp4" 0
 run_case "$WORK/h264_2997_stereo16" "$WORK/h264_2997_stereo16.mp4" 0
