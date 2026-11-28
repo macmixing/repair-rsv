@@ -52,31 +52,45 @@ echo "Building fixtures"
 python3 -I "$HERE/make_fixture.py" "$WORK/hevc50_4x24.mp4" "$WORK/hevc50_4x24" 48
 python3 -I "$HERE/make_fixture.py" "$WORK/h264_2997_4x24.mp4" "$WORK/h264_2997_4x24" 15
 python3 -I "$HERE/make_fixture.py" "$WORK/h264_2997_stereo16.mp4" "$WORK/h264_2997_stereo16" 15
-# Audio that reads as a 1792-byte NAL: valid header, invalid header, and sample-aligned (1800 bytes) in GOP 0
+# Audio at the start of GOP 0 that reads as a NAL unit. Each case is caught by one guard only:
+#   fake_valid_header:   1796-byte step, not sample-aligned, valid header  -> whole-sample check
+#   fake_invalid_header: 1800-byte step, sample-aligned, forbidden bit set -> NAL header check
+#   fake_sample_aligned: 1800-byte step, sample-aligned, valid header      -> GOP vote
 python3 -I "$HERE/plant_nal.py" "$WORK/hevc50_4x24" "$WORK/hevc50_4x24_fake_valid_header" 0 0000070001
-python3 -I "$HERE/plant_nal.py" "$WORK/hevc50_4x24" "$WORK/hevc50_4x24_fake_invalid_header" 0 00000700ff
+python3 -I "$HERE/plant_nal.py" "$WORK/hevc50_4x24" "$WORK/hevc50_4x24_fake_invalid_header" 0 00000704ff
 python3 -I "$HERE/plant_nal.py" "$WORK/hevc50_4x24" "$WORK/hevc50_4x24_fake_sample_aligned" 0 0000070401
 python3 -I "$HERE/plant_nal.py" "$WORK/h264_2997_4x24" "$WORK/h264_2997_4x24_fake_valid_header" 0 0000070001
 
 failures=0
+# run_case <fixture> <donor> <GOPs expected to disagree with the measured audio chunk>
 run_case() {
-  local fixture="$1" donor="$2"
+  local fixture="$1" donor="$2" expected_disagree="$3"
   echo "== $(basename "$fixture")"
   rm -f "$fixture.RSV_fixed-rsv.MP4"
   if ! "$ENGINE" -rsv "$donor" "$fixture.RSV" > "$fixture.log" 2>&1; then
     echo "  engine failed:"; tail -20 "$fixture.log"; failures=$((failures + 1)); return
   fi
-  grep -E "measured audio chunk|derived parameters" "$fixture.log" | sed 's/^/  /' || true
+  local measured agree examined
+  measured="$(grep -E "measured audio chunk" "$fixture.log" || true)"
+  echo "  ${measured:-no measured audio chunk}"
+  if [[ "$measured" =~ ([0-9]+)\ of\ ([0-9]+)\ GOPs\ agree ]]; then
+    agree="${BASH_REMATCH[1]}" examined="${BASH_REMATCH[2]}"
+    if [[ $((examined - agree)) -ne $expected_disagree ]]; then
+      echo "  GOP agreement: MISMATCH (expected $expected_disagree disagreeing GOP(s))"; failures=$((failures + 1))
+    fi
+  else
+    echo "  GOP agreement: MISMATCH (engine did not measure the audio chunk)"; failures=$((failures + 1))
+  fi
   python3 -I "$HERE/check_recovery.py" "$fixture.RSV_fixed-rsv.MP4" "$fixture" || failures=$((failures + 1))
 }
 
-run_case "$WORK/hevc50_4x24" "$WORK/hevc50_4x24.mp4"
-run_case "$WORK/hevc50_4x24_fake_valid_header" "$WORK/hevc50_4x24.mp4"
-run_case "$WORK/hevc50_4x24_fake_invalid_header" "$WORK/hevc50_4x24.mp4"
-run_case "$WORK/hevc50_4x24_fake_sample_aligned" "$WORK/hevc50_4x24.mp4"
-run_case "$WORK/h264_2997_4x24" "$WORK/h264_2997_4x24.mp4"
-run_case "$WORK/h264_2997_4x24_fake_valid_header" "$WORK/h264_2997_4x24.mp4"
-run_case "$WORK/h264_2997_stereo16" "$WORK/h264_2997_stereo16.mp4"
+run_case "$WORK/hevc50_4x24" "$WORK/hevc50_4x24.mp4" 0
+run_case "$WORK/hevc50_4x24_fake_valid_header" "$WORK/hevc50_4x24.mp4" 0
+run_case "$WORK/hevc50_4x24_fake_invalid_header" "$WORK/hevc50_4x24.mp4" 0
+run_case "$WORK/hevc50_4x24_fake_sample_aligned" "$WORK/hevc50_4x24.mp4" 1
+run_case "$WORK/h264_2997_4x24" "$WORK/h264_2997_4x24.mp4" 0
+run_case "$WORK/h264_2997_4x24_fake_valid_header" "$WORK/h264_2997_4x24.mp4" 0
+run_case "$WORK/h264_2997_stereo16" "$WORK/h264_2997_stereo16.mp4" 0
 
 if [[ $failures -gt 0 ]]; then
   echo "$failures RSV recovery case(s) failed"

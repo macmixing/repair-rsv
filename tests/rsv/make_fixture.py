@@ -5,7 +5,8 @@ the layout described in source/untrunc-rsv/RSV_FILE_FORMAT.md, followed by an
 interrupted trailing GOP. rtmd packets are synthetic (prefix + Sony tag + counter).
 
 Outputs next to <out>: <out>.RSV, <out>.expected_video, <out>.expected_a<N> (the
-payloads a correct recovery must reproduce) and <out>.layout.json.
+payloads a correct recovery must reproduce) and <out>.layout.json (GOP layout plus the
+expected video packets, keyframes and stream durations).
 
 usage: make_fixture.py <source.mp4> <out-prefix> <frames-per-gop>
 """
@@ -47,7 +48,8 @@ def main():
     video_info = probe(source, "v:0", "stream=codec_name,avg_frame_rate")["streams"][0]
     aud = AUD_PATTERNS[video_info["codec_name"]]
     gop_seconds = frames_per_gop / Fraction(video_info["avg_frame_rate"])
-    packet_sizes = [int(p["size"]) for p in probe(source, "v:0", "packet=size")["packets"]]
+    packets = probe(source, "v:0", "packet=size,flags")["packets"]
+    packet_sizes = [int(p["size"]) for p in packets]
     video = stream_payload(source, "0:v:0")
     assert sum(packet_sizes) == len(video), "video payload does not match packet sizes"
 
@@ -91,7 +93,13 @@ def main():
         with open(out + f".expected_a{track}", "wb") as f:
             f.write(data)
     with open(out + ".layout.json", "w") as f:
-        json.dump({"gops": gop_count, "track_chunks": track_chunks, "audio_starts": audio_starts}, f)
+        json.dump({
+            "gops": gop_count,
+            "track_chunks": track_chunks,
+            "audio_starts": audio_starts,
+            "video_packets": [[int(p["size"]), "K" in p["flags"]] for p in packets[:gop_count * frames_per_gop]],
+            "duration_seconds": str(gop_count * gop_seconds),
+        }, f)
     print(f"{out}.RSV: {gop_count} GOPs, audio chunk {sum(track_chunks)} bytes, {len(track_chunks)} tracks")
 
 
