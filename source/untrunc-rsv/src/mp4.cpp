@@ -2589,7 +2589,7 @@ void Mp4::repairRsv(const string& filename) {
 	}
 	
 	// Calculate audio chunk size based on GOP duration from the reference file.
-	// If we can measure the first GOP directly from the RSV, prefer that value:
+	// Prefer the size measured from the RSV's GOPs (see rsv_audio_chunk.cpp):
 	// Sony clips can round nominal 29.97/23.98 timings in ways that make the
 	// derived chunk size drift by a few hundred bytes per GOP.
 	double fps = (double)video_timescale / video_duration_per_sample;

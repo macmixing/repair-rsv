@@ -21,7 +21,7 @@ off_t measureGop(const uchar* buf, size_t last_frame, size_t next_rtmd, off_t au
 	while (cursor + 4 <= next_rtmd) {
 		uint nal_size = ((uint)buf[cursor] << 24) | ((uint)buf[cursor + 1] << 16) |
 		                ((uint)buf[cursor + 2] << 8) | (uint)buf[cursor + 3];
-		if (nal_size == 0 || cursor + 4 + nal_size > next_rtmd) {
+		if (nal_size == 0 || nal_size > next_rtmd - cursor - 4) {
 			break;
 		}
 		// forbidden_zero_bit: top bit of the NAL header in both H.264 and HEVC
