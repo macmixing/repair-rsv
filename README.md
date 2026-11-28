@@ -68,7 +68,7 @@ The RSV recovery code:
 
 - detects Sony `rtmd` GOP structure
 - rebuilds video/audio sample tables from RSV data
-- measures audio chunk size from the RSV itself
+- measures audio chunk size from the RSV itself, validating each GOP's video/audio boundary and taking the size most GOPs agree on
 - handles incomplete trailing RSV GOPs without aborting with `Could not read chars`
 - writes a repaired MP4 beside the broken RSV
 
