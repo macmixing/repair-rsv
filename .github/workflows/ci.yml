@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  engine:
+    name: Engine (macOS)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install FFmpeg
+        run: brew install ffmpeg pkgconf
+
+      - name: Build engine
+        run: scripts/build-from-source.sh
+
+      - name: RSV recovery fixtures
+        run: tests/rsv/run.sh bin/untrunc-rsv
+
+  app:
+    name: App (macOS)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Build web UI
+        working-directory: app
+        run: npm run web:build
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri
+
+      # Release builds fill lib/ with bundled FFmpeg dylibs; the bundle config only needs it to exist.
+      - name: Stage bundle resources
+        run: mkdir -p lib && touch lib/.ci-placeholder
+
+      - name: Check Tauri app
+        run: cargo check --locked --manifest-path app/src-tauri/Cargo.toml
